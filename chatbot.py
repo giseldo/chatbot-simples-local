@@ -1,25 +1,33 @@
 import gradio as gr
-from openai import OpenAI
+from PIL import Image
+import numpy as np
 
-client = OpenAI(base_url="http://127.0.0.1:1337/v1")
-
-def chatbot_response(input_text):
-    completion = client.chat.completions.create(
-        model="llama3.2-1b-instruct",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": input_text}
-        ],
-        max_tokens=50
-    )
-    return completion.choices[0].message.content
+def create_mosaic(images):
+    # Carregar as imagens
+    loaded_images = [Image.open(image) for image in images]
+    
+    # Determinar o tamanho do mosaico
+    widths, heights = zip(*(img.size for img in loaded_images))
+    total_width = sum(widths)
+    max_height = max(heights)
+    
+    # Criar uma nova imagem para o mosaico
+    mosaic = Image.new('RGB', (total_width, max_height))
+    
+    # Colar as imagens no mosaico
+    x_offset = 0
+    for img in loaded_images:
+        mosaic.paste(img, (x_offset, 0))
+        x_offset += img.width
+    
+    return mosaic
 
 iface = gr.Interface(
-    fn=chatbot_response,
-    inputs="text",
-    outputs="text",
-    title="Chatbot LLM Local",
-    description="Um chatbot simples conectado a um LLM local."
+    fn=create_mosaic,
+    inputs=gr.inputs.File(file_count="multiple", type="file"),
+    outputs="image",
+    title="Mosaico de Imagens",
+    description="Carregue várias imagens para criar um mosaico."
 )
 
 if __name__ == "__main__":
